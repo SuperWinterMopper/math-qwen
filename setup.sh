@@ -59,12 +59,24 @@ files=(
 )
 
 for f in "${files[@]}"; do
+  url="${base}/${f}"
   if [[ -f "$f" ]]; then
     echo "Already have $f (skipping)"
-  else
-    echo "Downloading $f..."
-    wget -q --show-progress "${base}/${f}"
+    continue
   fi
+
+  echo "Downloading $f..."
+  wget \
+    --inet4-only \
+    --timeout=20 \
+    --read-timeout=20 \
+    --tries=5 \
+    --waitretry=2 \
+    --retry-connrefused \
+    --server-response \
+    --progress=bar:force:noscroll \
+    -O "$f" \
+    "$url"
 done
 
 # 3) (Optional) install packages

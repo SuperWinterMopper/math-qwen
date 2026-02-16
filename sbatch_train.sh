@@ -27,3 +27,5 @@ nvidia-smi
 
 # Use uv to run the script - it manages the venv and dependencies automatically
 /projects/p33139/other/qwen-math/.venv/bin/python copy_of_genai_ml_hw8_fine_tuning_leads_to_forgetting.py
+
+echo "Job completed at: $(date)"

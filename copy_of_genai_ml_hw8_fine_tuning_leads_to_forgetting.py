@@ -1,5 +1,10 @@
 """## Import Packages"""
 
+import os
+import json
+import csv
+import random
+import torch
 from transformers import (
     AutoModelForCausalLM, # imports the model for causal language modeling
     AutoTokenizer, # imports the tokenizer for the model
@@ -11,17 +16,17 @@ from peft import (
     get_peft_model, # imports the function to get the PEFT model
     PeftModel # imports the PEFT model
 )
-import os
-import json
-import torch
-os.environ["CUDA_VISIBLE_DEVICES"] = '0' # Sets the CUDA device to use
-device = torch.device('cuda:0') # Creates a CUDA device object
 from datasets import Dataset # Imports the Dataset class from the datasets library
 from trl import SFTConfig, SFTTrainer # Imports the SFTConfig and SFTTrainer classes from the trl library
-import random
-random.seed(42) # Sets the random seed for reproducibility
 from tqdm import tqdm # Imports the tqdm library for progress bars
-import csv
+try:
+    from google.colab import drive, files
+except ImportError:
+    pass  # Not in Colab environment
+
+os.environ["CUDA_VISIBLE_DEVICES"] = '0' # Sets the CUDA device to use
+device = torch.device('cuda:0') # Creates a CUDA device object
+random.seed(42) # Sets the random seed for reproducibility
 
 """## LLM Fine-tuning
 
@@ -30,7 +35,7 @@ import csv
 
 sft_model_name = 'Qwen/Qwen2.5-1.5B-Instruct' # Specifies the name of the pre-trained model to use
 sft_bnb_config = BitsAndBytesConfig( # Configuration for using bitsandbytes
-    load_in_4bit=True,w
+    load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
     bnb_4bit_quant_type="nf4",
     bnb_4bit_compute_dtype=torch.bfloat16,
@@ -156,14 +161,13 @@ print(f"formatted_gsm8k filtered: kept {k}/{n} longest examples using fields={FI
 
 """### Fine-tuning"""
 
-from google.colab import drive
-drive.mount("/content/drive", force_remount=True)
+# drive.mount("/content/drive", force_remount=True)  # Disabled for Linux server
 
 # trainer
 training_arguments = SFTConfig( # Configuration for the SFT trainer
     seed=1126,
     data_seed=1126,
-    output_dir=f"/content/drive/MyDrive/cs396_sft_runs/run1",
+    output_dir="./runs/run1",
     per_device_train_batch_size=1,
     gradient_accumulation_steps=4,
     optim="paged_adamw_32bit",
@@ -200,21 +204,20 @@ trainer.train() # Starts the training process
 ### Load Adapter Checkpoint
 """
 
-import os
-
-# List all directories within the 'sft' folder
-checkpoint_dirs = [d for d in os.listdir('/content/drive/MyDrive/cs396_sft_runs/run1') if os.path.isdir(os.path.join('/content/drive/MyDrive/cs396_sft_runs/run1', d)) and d.startswith('checkpoint-')]
+# List all directories within the 'runs/run1' folder
+runs_dir = './runs/run1'
+checkpoint_dirs = [d for d in os.listdir(runs_dir) if os.path.isdir(os.path.join(runs_dir, d)) and d.startswith('checkpoint-')]
 checkpoint_dirs.sort()
 
-adapter_path = '/content/drive/MyDrive/cs396_sft_runs/run1/checkpoint-1246' # will update to latest checkpoint
+adapter_path = './runs/run1/checkpoint-1246' # will update to latest checkpoint
 
 if checkpoint_dirs:
-    print("Available checkpoint directories in 'sft/':")
+    print("Available checkpoint directories in 'runs/run1/':")
     for d in sorted(checkpoint_dirs):
-        print(f"- /content/drive/MyDrive/cs396_sft_runs/run1{d}")
-    adapter_path = '/content/drive/MyDrive/cs396_sft_runs/run1' + str(checkpoint_dirs[-1])
+        print(f"- {runs_dir}/{d}")
+    adapter_path = os.path.join(runs_dir, str(checkpoint_dirs[-1]))
 else:
-    print("No checkpoint directories found in 'sft/'. Please ensure the training completed successfully.")
+    print("No checkpoint directories found in 'runs/run1/'. Please ensure the training completed successfully.")
 
 generator = pipeline( # Creates a text generation pipeline
     'text-generation',
@@ -324,7 +327,7 @@ for i, qna in enumerate(gsm8k_test_private): # Iterates over the private test da
 
 gsm8k_progress_bar.close() # Closes the progress bar
 
-print(f'GSM8K Private Test Data Inference Complete') # Prints a message indicating that the private test data evaluation is complete
+print('GSM8K Private Test Data Inference Complete') # Prints a message indicating that the private test data evaluation is complete
 
 """### AILuminate"""
 
@@ -359,7 +362,7 @@ for i, question in enumerate(ailuminate_test): # Iterates over the AILuminate te
     ailuminate_progress_bar.update() # Updates the progress bar
 ailuminate_progress_bar.close() # Closes the progress bar
 
-print(f'AIluminate Test Data Evaluation Complete')
+print('AIluminate Test Data Evaluation Complete')
 
 """## Create Submission File"""
 
@@ -368,8 +371,7 @@ STUDENT_ID = '' # TODO: Add your student id
 with open(f'./{STUDENT_ID}.txt', 'w') as output_f:
   print(gsm8k_predictions + ailuminate_predictions, file=output_f) # Prints the predictions to the output file
 
-from google.colab import files
-files.download(f'./{STUDENT_ID}.txt')
+# files.download(f'./{STUDENT_ID}.txt')  # Disabled for Linux server - file saved locally
 
 """## References
 - https://medium.com/@sewoong.lee/how-to-reproduce-llama-3s-performance-on-gsm-8k-e0dce7fe9926

@@ -4,6 +4,7 @@ import os
 import json
 import csv
 import random
+from datetime import datetime
 import torch
 from transformers import (
     AutoModelForCausalLM, # imports the model for causal language modeling
@@ -28,12 +29,14 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0' # Sets the CUDA device to use
 device = torch.device('cuda:0') # Creates a CUDA device object
 random.seed(42) # Sets the random seed for reproducibility
 
+RUN_TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S') # Timestamp for output filenames
+
 """## LLM Fine-tuning
 
 ### Load Model & Tokenizer
 """
 
-sft_model_name = 'Qwen/Qwen2.5-1.5B-Instruct' # Specifies the name of the pre-trained model to use
+sft_model_name = 'Qwen/Qwen3-8B' # Specifies the name of the pre-trained model to use
 sft_bnb_config = BitsAndBytesConfig( # Configuration for using bitsandbytes
     load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
@@ -166,10 +169,15 @@ print(f"formatted_gsm8k filtered: kept {k}/{n} longest examples using fields={FI
 training_arguments = SFTConfig( # Configuration for the SFT trainer
     seed=1126,
     data_seed=1126,
-    output_dir="./runs/run1",
-    per_device_train_batch_size=1,
-    gradient_accumulation_steps=4,
-    optim="paged_adamw_32bit",
+    output_dir=f"./runs/run_{RUN_TIMESTAMP}",
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=1,
+    optim="paged_adamw_8bit",
+    gradient_checkpointing=True,
+    gradient_checkpointing_kwargs={"use_reentrant": False},
+    dataloader_num_workers=4,
+    dataloader_pin_memory=True,
+    tf32=True,
     num_train_epochs=2, # TODO: If you use fixed few-shot examples, increase epoch
     logging_strategy="steps",
     logging_steps=50,
@@ -203,20 +211,20 @@ trainer.train() # Starts the training process
 ### Load Adapter Checkpoint
 """
 
-# List all directories within the 'runs/run1' folder
-runs_dir = './runs/run1'
+# List all directories within the run output folder
+runs_dir = f'./runs/run_{RUN_TIMESTAMP}'
 checkpoint_dirs = [d for d in os.listdir(runs_dir) if os.path.isdir(os.path.join(runs_dir, d)) and d.startswith('checkpoint-')]
 checkpoint_dirs.sort()
 
-adapter_path = './runs/run1/checkpoint-1246' # will update to latest checkpoint
+adapter_path = None # will be set to latest checkpoint
 
 if checkpoint_dirs:
-    print("Available checkpoint directories in 'runs/run1/':")
+    print(f"Available checkpoint directories in '{runs_dir}':")
     for d in sorted(checkpoint_dirs):
         print(f"- {runs_dir}/{d}")
     adapter_path = os.path.join(runs_dir, str(checkpoint_dirs[-1]))
 else:
-    print("No checkpoint directories found in 'runs/run1/'. Please ensure the training completed successfully.")
+    print(f"No checkpoint directories found in '{runs_dir}'. Please ensure the training completed successfully.")
 
 generator = pipeline( # Creates a text generation pipeline
     'text-generation',
@@ -367,10 +375,12 @@ print('AIluminate Test Data Evaluation Complete')
 
 # Combine the results into one file.
 STUDENT_ID = 'ubx5728' # TODO: Add your student id
-with open(f'./{STUDENT_ID}.txt', 'w') as output_f:
+output_filename = f'./{STUDENT_ID}_{RUN_TIMESTAMP}.txt'
+with open(output_filename, 'w') as output_f:
   print(gsm8k_predictions + ailuminate_predictions, file=output_f) # Prints the predictions to the output file
+print(f'Submission saved to {output_filename}')
 
-# files.download(f'./{STUDENT_ID}.txt')  # Disabled for Linux server - file saved locally
+# files.download(output_filename)  # Disabled for Linux server - file saved locally
 
 """## References
 - https://medium.com/@sewoong.lee/how-to-reproduce-llama-3s-performance-on-gsm-8k-e0dce7fe9926

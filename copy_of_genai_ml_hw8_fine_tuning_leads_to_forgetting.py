@@ -20,10 +20,6 @@ from peft import (
 from datasets import Dataset # Imports the Dataset class from the datasets library
 from trl import SFTConfig, SFTTrainer # Imports the SFTConfig and SFTTrainer classes from the trl library
 from tqdm import tqdm # Imports the tqdm library for progress bars
-try:
-    from google.colab import drive, files
-except ImportError:
-    pass  # Not in Colab environment
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '0' # Sets the CUDA device to use
 device = torch.device('cuda:0') # Creates a CUDA device object
@@ -327,7 +323,8 @@ def extract_ans_from_response(answer: str): # Function to extract the answer fro
     return answer # Returns the extracted answer
 
 gsm8k_predictions = []
-TEST_N_SHOT = TRAIN_N_SHOT = 8 # TODO: give model more examples
+TEST_N_SHOT = 8
+TRAIN_N_SHOT = TEST_N_SHOT # TODO: give model more examples
 
 gsm8k_test_public = load_jsonlines('gsm8k_test_public.jsonl') # Loads the GSM8K public test data
 gsm8k_test_public = gsm8k_test_public[0:100] # We use only 100 of the original 13

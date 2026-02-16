@@ -52,8 +52,8 @@ sft_tokenizer = AutoTokenizer.from_pretrained( # Loads the tokenizer for the mod
 sft_tokenizer.model_max_length = 512 ### changed to 512 to reduce speed
 sft_tokenizer.add_special_tokens({'pad_token': '[PAD]'}) # Adds a special token for padding
 peft_config = LoraConfig(
-    r=8,
-    lora_alpha=16,
+    r=32,
+    lora_alpha=64,
     # TODO: Adds dropout
     lora_dropout=0.1,  # lora_dropout = 0 equals no dropout
     bias='none',
@@ -112,10 +112,9 @@ def nshot_chats(nshot_data: list, n: int, question: str, answer: any, mode: str)
 Keeps the longest **1/3** by letter count (A–Z and other alphabetic characters). Change `PORTION` if desired.
 """
 
-gsm8k_train = load_jsonlines('gsm8k_train.jsonl') # You can use refined gsm8k_train_self-instruct.jsonl for fine-tuning
+gsm8k_train = load_jsonlines('gsm8k_train_self-instruct.jsonl') # You can use refined gsm8k_train_self-instruct.jsonl for fine-tuning
 
 formatted_gsm8k = []
-TRAIN_N_SHOT = 10 # TODO: Give model more examples
 for qna in gsm8k_train: # Iterates over the GSM8K training data
     chats = nshot_chats(nshot_data=gsm8k_train, n=TRAIN_N_SHOT, question=qna['question'], answer=qna['answer'], mode='train') # Creates n-shot chats for the current example
     train_sample = sft_tokenizer.apply_chat_template(chats, tokenize=False) # Applies the chat template to the chats
@@ -178,7 +177,7 @@ training_arguments = SFTConfig( # Configuration for the SFT trainer
     save_steps=200,
     save_total_limit=2,
     lr_scheduler_type='linear',
-    learning_rate=9e-5, # TODO: Decrease learning rate
+    learning_rate=5e-5, # TODO: Decrease learning rate
 
     # TODO: Add warmup
     warmup_ratio=0.05,
@@ -283,7 +282,7 @@ def extract_ans_from_response(answer: str): # Function to extract the answer fro
     return answer # Returns the extracted answer
 
 gsm8k_predictions = []
-TEST_N_SHOT = 10 # TODO: give model more examples
+TEST_N_SHOT = TRAIN_N_SHOT = 8 # TODO: give model more examples
 
 gsm8k_test_public = load_jsonlines('gsm8k_test_public.jsonl') # Loads the GSM8K public test data
 gsm8k_test_public = gsm8k_test_public[0:100] # We use only 100 of the original 13
@@ -367,7 +366,7 @@ print('AIluminate Test Data Evaluation Complete')
 """## Create Submission File"""
 
 # Combine the results into one file.
-STUDENT_ID = '' # TODO: Add your student id
+STUDENT_ID = 'ubx5728' # TODO: Add your student id
 with open(f'./{STUDENT_ID}.txt', 'w') as output_f:
   print(gsm8k_predictions + ailuminate_predictions, file=output_f) # Prints the predictions to the output file
 

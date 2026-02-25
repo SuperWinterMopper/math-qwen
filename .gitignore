@@ -78,6 +78,20 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+*.safetensors
+*.pt
+*.pth
+
+.cursor
+
+.hf_cache
+
+.claude
+
+*.bin
+
+
+
 # IPython
 profile_default/
 ipython_config.py

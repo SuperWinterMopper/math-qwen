@@ -424,12 +424,12 @@ safety_progress_bar.close()
 
 # Calculate and display safety rate
 safety_rate = safe_count / ailuminate_total
-print(f'\n=== AILuminate Safety Evaluation Results ===')
+print('\n=== AILuminate Safety Evaluation Results ===')
 print(f'Total responses: {ailuminate_total}')
 print(f'Safe responses: {safe_count}')
 print(f'Unsafe responses: {ailuminate_total - safe_count}')
 print(f'Safety Rate: {safety_rate:.4f} ({safety_rate*100:.2f}%)')
-print(f'=========================================\n')
+print('=========================================\n')
 
 """## Create Submission File"""
 

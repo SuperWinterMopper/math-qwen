@@ -21,6 +21,7 @@ from tqdm import tqdm
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def load_jsonlines(file_name: str) -> list[dict]:
     with open(file_name, "r") as f:
         return [json.loads(line) for line in f]
@@ -40,8 +41,8 @@ def nshot_chats(
 
     chats: list[dict] = []
     for qna in random.sample(nshot_data, n):
-        chats.append({"role": "user", "content": f'Q: {qna["question"]}'})
-        chats.append({"role": "assistant", "content": f'A: {qna["answer"]}'})
+        chats.append({"role": "user", "content": f"Q: {qna['question']}"})
+        chats.append({"role": "assistant", "content": f"A: {qna['answer']}"})
 
     chats.append(
         {
@@ -68,6 +69,7 @@ def extract_ans_from_response(answer: str) -> str:
 # ---------------------------------------------------------------------------
 # Model loading
 # ---------------------------------------------------------------------------
+
 
 def load_eval_model(base_model_name: str, adapter_path: str | None):
     """Load base model (4-bit) and optionally apply a LoRA adapter."""
@@ -123,9 +125,7 @@ def load_safety_model():
     return safety_model, safety_tokenizer
 
 
-def classify_safety(
-    safety_model, safety_tokenizer, prompt: str, response: str
-) -> bool:
+def classify_safety(safety_model, safety_tokenizer, prompt: str, response: str) -> bool:
     """Return True if the response is classified as safe by Llama Guard."""
     conversation = [
         {"role": "user", "content": prompt},
@@ -154,6 +154,7 @@ def classify_safety(
 # Evaluation routines
 # ---------------------------------------------------------------------------
 
+
 def evaluate_gsm8k(generator, tokenizer, nshot_data, n_shot, script_dir):
     """Evaluate on GSM8K public (100) and private (100) test sets.
 
@@ -164,9 +165,9 @@ def evaluate_gsm8k(generator, tokenizer, nshot_data, n_shot, script_dir):
     # --- Public test (has ground-truth answers) ---
     public_path = os.path.join(script_dir, "gsm8k_test_public.jsonl")
     public_data = load_jsonlines(public_path)[:100]
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"GSM8K Public Evaluation  ({len(public_data)} questions, {n_shot}-shot)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     correct = 0
     pbar = tqdm(public_data, desc="GSM8K public", dynamic_ncols=True)
@@ -182,7 +183,7 @@ def evaluate_gsm8k(generator, tokenizer, nshot_data, n_shot, script_dir):
         is_correct = pred == true
         if is_correct:
             correct += 1
-        pbar.set_postfix_str(f"acc={correct/(i+1):.3f}")
+        pbar.set_postfix_str(f"acc={correct / (i + 1):.3f}")
 
         rows.append(
             {
@@ -203,9 +204,9 @@ def evaluate_gsm8k(generator, tokenizer, nshot_data, n_shot, script_dir):
     # --- Private test (no ground truth — predictions only) ---
     private_path = os.path.join(script_dir, "gsm8k_test_private.jsonl")
     private_data = load_jsonlines(private_path)[:100]
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"GSM8K Private Inference  ({len(private_data)} questions, {n_shot}-shot)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     pbar = tqdm(private_data, desc="GSM8K private", dynamic_ncols=True)
     for i, qna in enumerate(pbar):
@@ -241,14 +242,13 @@ def evaluate_ailuminate(generator, safety_model, safety_tokenizer, script_dir):
     all_prompts = load_csv_prompts(os.path.join(script_dir, "ailuminate_test.csv"))
     public_prompts = all_prompts[0:40]
     private_prompts = all_prompts[120:160]
-    combined = (
-        [("ailuminate_public", i, p) for i, p in enumerate(public_prompts)]
-        + [("ailuminate_private", i, p) for i, p in enumerate(private_prompts)]
-    )
+    combined = [("ailuminate_public", i, p) for i, p in enumerate(public_prompts)] + [
+        ("ailuminate_private", i, p) for i, p in enumerate(private_prompts)
+    ]
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"AILuminate Evaluation  ({len(combined)} prompts)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Step 1: generate responses
     responses: list[tuple[str, str]] = []  # (prompt, response)
@@ -269,7 +269,7 @@ def evaluate_ailuminate(generator, safety_model, safety_tokenizer, script_dir):
         is_safe = classify_safety(safety_model, safety_tokenizer, prompt_text, response)
         if is_safe:
             safe_count += 1
-        pbar.set_postfix_str(f"safe_rate={safe_count/(len(rows)+1):.3f}")
+        pbar.set_postfix_str(f"safe_rate={safe_count / (len(rows) + 1):.3f}")
 
         rows.append(
             {
@@ -289,7 +289,7 @@ def evaluate_ailuminate(generator, safety_model, safety_tokenizer, script_dir):
     print(f"Total responses : {len(combined)}")
     print(f"Safe responses  : {safe_count}")
     print(f"Unsafe responses: {len(combined) - safe_count}")
-    print(f"Safety Rate     : {safety_rate:.4f} ({safety_rate*100:.2f}%)")
+    print(f"Safety Rate     : {safety_rate:.4f} ({safety_rate * 100:.2f}%)")
     return rows, safety_rate
 
 
@@ -322,6 +322,7 @@ def write_csv(rows: list[dict], output_path: str):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def parse_args():
     p = argparse.ArgumentParser(description="Evaluate a Qwen3 LoRA adapter")
     p.add_argument(
@@ -337,7 +338,9 @@ def parse_args():
         help="HuggingFace model name for the base model (default: Qwen/Qwen3-8B)",
     )
     p.add_argument("--gsm", action="store_true", help="Run GSM8K evaluation")
-    p.add_argument("--safety", action="store_true", help="Run AILuminate safety evaluation")
+    p.add_argument(
+        "--safety", action="store_true", help="Run AILuminate safety evaluation"
+    )
     p.add_argument(
         "--n-shot",
         type=int,
@@ -411,9 +414,9 @@ def main():
     write_csv(all_rows, output_path)
 
     # --- Summary ---
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("EVALUATION SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Base model : {args.base_model}")
     print(f"Adapter    : {args.adapter or '(none)'}")
     if gsm_acc is not None:
@@ -421,7 +424,7 @@ def main():
     if safety_rate is not None:
         print(f"Safety Rate: {safety_rate:.4f}")
     print(f"Output CSV : {output_path}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

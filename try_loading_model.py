@@ -9,7 +9,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
 
 
-def ensure_snapshot(repo_id: str, cache_dir: str, allow_patterns=None, revision=None) -> str:
+def ensure_snapshot(
+    repo_id: str, cache_dir: str, allow_patterns=None, revision=None
+) -> str:
     """
     Download a repo snapshot if needed and return the local path.
     Uses HF cache and resumes automatically.
@@ -39,7 +41,9 @@ def main():
     # Put caches somewhere persistent on HPC
     HF_HOME = os.environ.get("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
     HF_CACHE = os.environ.get("HF_HUB_CACHE", os.path.join(HF_HOME, "hub"))
-    DATASETS_CACHE = os.environ.get("HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets"))
+    DATASETS_CACHE = os.environ.get(
+        "HF_DATASETS_CACHE", os.path.join(HF_HOME, "datasets")
+    )
 
     os.makedirs(HF_CACHE, exist_ok=True)
     os.makedirs(DATASETS_CACHE, exist_ok=True)
@@ -75,7 +79,9 @@ def main():
     print(f"Adapter snapshot path: {adapter_path}")
 
     # ---- 3) Download dataset ----
-    print(f"\nDownloading dataset: {args.dataset} ({args.dataset_config}) split={args.split}")
+    print(
+        f"\nDownloading dataset: {args.dataset} ({args.dataset_config}) split={args.split}"
+    )
     ds = load_dataset(
         args.dataset,
         args.dataset_config,
@@ -86,7 +92,9 @@ def main():
 
     # ---- 4) Load PEFT config (from adapter ckpt) ----
     print("\nLoading PEFT config...")
-    peft_cfg = PeftConfig.from_pretrained(adapter_path, subfolder=args.ckpt, local_files_only=True)
+    peft_cfg = PeftConfig.from_pretrained(
+        adapter_path, subfolder=args.ckpt, local_files_only=True
+    )
     print(f"Adapter declares base: {peft_cfg.base_model_name_or_path}")
 
     # ---- 5) Load base model (from local snapshot path) ----
@@ -96,7 +104,7 @@ def main():
 
     base = AutoModelForCausalLM.from_pretrained(
         base_path,
-        device_map="auto",          # change to {"": 0} if you want forced single GPU
+        device_map="auto",  # change to {"": 0} if you want forced single GPU
         torch_dtype=dtype,
         trust_remote_code=True,
         local_files_only=True,

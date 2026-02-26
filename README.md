@@ -1,3 +1,6 @@
 # math-qwen
 
-should use Qwen3.8B
+To perform evaluation on the fine-tuned model, simply run 
+```
+run_evaluation.py
+```
